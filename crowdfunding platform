@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>✨ DreamFund - Crowdfunding Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Quicksand', sans-serif;
+      background: linear-gradient(135deg, #ffdde1, #ee9ca7);
+      color: #333;
+      padding: 20px;
+    }
+
+    h1, h2 {
+      text-align: center;
+      color: #222;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: auto;
+      background: #ffffffcc;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+
+    input, textarea, button, select {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+    }
+
+    input, textarea, select {
+      background: #f7f7f7;
+    }
+
+    button {
+      background: #ff6584;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #ff3366;
+    }
+
+    .project-card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+      margin-top: 30px;
+      overflow: hidden;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .project-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
+
+    .project-card-content {
+      padding: 20px;
+    }
+
+    .progress-bar {
+      background: #eee;
+      border-radius: 10px;
+      overflow: hidden;
+      height: 20px;
+      margin: 10px 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #28a745;
+      color: white;
+      text-align: center;
+      line-height: 20px;
+    }
+
+    .update-log {
+      background: #f1f1f1;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.9em;
+      margin-top: 10px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🌟 DreamFund</h1>
+    <h2>Launch Your Dream Project</h2>
+
+    <input id="title" placeholder="Project Title" />
+    <textarea id="description" placeholder="Project Description"></textarea>
+    <input id="goal" type="number" placeholder="Funding Goal ($)" />
+    <input id="image" placeholder="Image URL (optional)" />
+    <button onclick="createProject()">Create Project</button>
+
+    <h2>🌍 Live Projects</h2>
+    <div id="projectList"></div>
+  </div>
+
+  <script>
+    let projects = JSON.parse(localStorage.getItem("crowdfundProjects") || "[]");
+
+    function createProject() {
+      const title = document.getElementById("title").value.trim();
+      const description = document.getElementById("description").value.trim();
+      const goal = parseFloat(document.getElementById("goal").value);
+      const image = document.getElementById("image").value.trim() || "https://source.unsplash.com/800x600/?startup";
+
+      if (!title || !description || isNaN(goal) || goal <= 0) {
+        alert("Please fill all fields correctly.");
+        return;
+      }
+
+      const newProject = {
+        id: Date.now(),
+        title,
+        description,
+        goal,
+        raised: 0,
+        image,
+        updates: [],
+        contributors: []
+      };
+
+      projects.push(newProject);
+      localStorage.setItem("crowdfundProjects", JSON.stringify(projects));
+      renderProjects();
+      document.getElementById("title").value = "";
+      document.getElementById("description").value = "";
+      document.getElementById("goal").value = "";
+      document.getElementById("image").value = "";
+    }
+
+    function renderProjects() {
+      const list = document.getElementById("projectList");
+      list.innerHTML = "";
+
+      projects.forEach((project, index) => {
+        const percent = Math.min((project.raised / project.goal) * 100, 100).toFixed(1);
+
+        const card = document.createElement("div");
+        card.className = "project-card";
+
+        card.innerHTML = `
+          <img src="${project.image}" alt="Project Image" />
+          <div class="project-card-content">
+            <h3>${project.title}</h3>
+            <p>${project.description}</p>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width:${percent}%">${percent}%</div>
+            </div>
+            <p><strong>Raised:</strong> $${project.raised.toFixed(2)} / $${project.goal}</p>
+            <input type="number" id="amount-${project.id}" placeholder="Contribution amount ($)" />
+            <input type="text" id="name-${project.id}" placeholder="Your name" />
+            <button onclick="contribute(${index})">Contribute</button>
+            <button onclick="addUpdate(${index})">Add Update</button>
+            <div class="update-log">
+              <strong>Updates:</strong><br/>
+              ${project.updates.map(u => `📢 ${u}`).join("<br/>") || "No updates yet."}
+            </div>
+          </div>
+        `;
+
+        list.appendChild(card);
+      });
+    }
+
+    function contribute(index) {
+      const project = projects[index];
+      const amountField = document.getElementById(`amount-${project.id}`);
+      const nameField = document.getElementById(`name-${project.id}`);
+      const amount = parseFloat(amountField.value);
+      const name = nameField.value.trim();
+
+      if (!name || isNaN(amount) || amount <= 0) {
+        alert("Enter a valid name and contribution amount.");
+        return;
+      }
+
+      // Simulate payment
+      alert(`✅ Thank you ${name} for contributing $${amount.toFixed(2)}!`);
+
+      project.raised += amount;
+      project.contributors.push({ name, amount, date: new Date().toISOString() });
+
+      localStorage.setItem("crowdfundProjects", JSON.stringify(projects));
+      renderProjects();
+    }
+
+    function addUpdate(index) {
+      const update = prompt("Enter your project update:");
+      if (update) {
+        projects[index].updates.push(update);
+        localStorage.setItem("crowdfundProjects", JSON.stringify(projects));
+        renderProjects();
+      }
+    }
+
+    renderProjects();
+  </script>
+</body>
+</html>
