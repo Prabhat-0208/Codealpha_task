@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Personal Book Library</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background: #f7f7f7;
+    }
+    h1 {
+      text-align: center;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    input, select, button {
+      padding: 8px;
+      margin: 5px 0;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+      text-align: left;
+    }
+    .history {
+      font-size: 0.9em;
+      color: #555;
+    }
+    .actions button {
+      margin-right: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📚 Personal Book Library</h1>
+
+    <h3>Add / Edit Book</h3>
+    <input id="title" placeholder="Title" />
+    <input id="author" placeholder="Author" />
+    <input id="isbn" placeholder="ISBN" />
+    <select id="genre">
+      <option value="">Select Genre</option>
+      <option value="Fiction">Fiction</option>
+      <option value="Non-Fiction">Non-Fiction</option>
+      <option value="Sci-fi">Sci-fi</option>
+      <option value="Fantasy">Fantasy</option>
+    </select>
+    <button onclick="saveBook()">Save Book</button>
+
+    <h3>Search & Filter</h3>
+    <input id="search" placeholder="Search by title..." oninput="renderBooks()" />
+    <select id="filterGenre" onchange="renderBooks()">
+      <option value="">All Genres</option>
+      <option value="Fiction">Fiction</option>
+      <option value="Non-Fiction">Non-Fiction</option>
+      <option value="Sci-fi">Sci-fi</option>
+      <option value="Fantasy">Fantasy</option>
+    </select>
+
+    <h3>Book List</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th><th>Author</th><th>Genre</th><th>ISBN</th><th>Status</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="bookTable"></tbody>
+    </table>
+  </div>
+
+  <script>
+    let books = JSON.parse(localStorage.getItem("books") || "[]");
+    let editingIndex = -1;
+
+    function saveBook() {
+      const title = document.getElementById("title").value.trim();
+      const author = document.getElementById("author").value.trim();
+      const isbn = document.getElementById("isbn").value.trim();
+      const genre = document.getElementById("genre").value;
+
+      if (!title || !author || !genre) {
+        alert("Please fill in all fields.");
+        return;
+      }
+
+      const book = {
+        title, author, isbn, genre,
+        available: true,
+        history: []
+      };
+
+      if (editingIndex > -1) {
+        books[editingIndex] = { ...books[editingIndex], ...book };
+        editingIndex = -1;
+      } else {
+        books.push(book);
+      }
+
+      localStorage.setItem("books", JSON.stringify(books));
+      clearForm();
+      renderBooks();
+    }
+
+    function clearForm() {
+      document.getElementById("title").value = "";
+      document.getElementById("author").value = "";
+      document.getElementById("isbn").value = "";
+      document.getElementById("genre").value = "";
+    }
+
+    function renderBooks() {
+      const table = document.getElementById("bookTable");
+      const search = document.getElementById("search").value.toLowerCase();
+      const filterGenre = document.getElementById("filterGenre").value;
+
+      table.innerHTML = "";
+
+      books.forEach((book, index) => {
+        if (
+          (search && !book.title.toLowerCase().includes(search)) ||
+          (filterGenre && book.genre !== filterGenre)
+        ) return;
+
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+          <td>${book.title}</td>
+          <td>${book.author}</td>
+          <td>${book.genre}</td>
+          <td>${book.isbn}</td>
+          <td>${book.available ? "✅ Available" : "❌ Borrowed"}</td>
+          <td class="actions">
+            <button onclick="editBook(${index})">Edit</button>
+            <button onclick="deleteBook(${index})">Delete</button>
+            <button onclick="toggleBorrow(${index})">
+              ${book.available ? "Borrow" : "Return"}
+            </button>
+          </td>
+        `;
+        table.appendChild(row);
+
+        if (book.history.length > 0) {
+          const historyRow = document.createElement("tr");
+          historyRow.innerHTML = `
+            <td colspan="6" class="history">
+              History: ${book.history.map(h =>
+                `${h.action} on ${new Date(h.date).toLocaleDateString()}`
+              ).join(" | ")}
+            </td>`;
+          table.appendChild(historyRow);
+        }
+      });
+    }
+
+    function editBook(index) {
+      const book = books[index];
+      document.getElementById("title").value = book.title;
+      document.getElementById("author").value = book.author;
+      document.getElementById("isbn").value = book.isbn;
+      document.getElementById("genre").value = book.genre;
+      editingIndex = index;
+    }
+
+    function deleteBook(index) {
+      if (confirm("Delete this book?")) {
+        books.splice(index, 1);
+        localStorage.setItem("books", JSON.stringify(books));
+        renderBooks();
+      }
+    }
+
+    function toggleBorrow(index) {
+      const book = books[index];
+      const action = book.available ? "Borrowed" : "Returned";
+      book.available = !book.available;
+      book.history.push({ action, date: new Date().toISOString() });
+      localStorage.setItem("books", JSON.stringify(books));
+      renderBooks();
+    }
+
+    // Initial render
+    renderBooks();
+  </script>
+</body>
+</html>
